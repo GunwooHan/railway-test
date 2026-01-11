@@ -41,20 +41,13 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS Configuration - Whitelist external access
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:8080,http://localhost:3000,http://127.0.0.1:8080").split(",")
-
-# Add wildcard for Railway deployment (adjust as needed)
-ALLOWED_ORIGINS.extend([
-    "*"  # Allow all origins for testing - restrict in production
-])
-
+# CORS Configuration - Allow all external access for testing
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"],
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=False,  # Must be False when using wildcard origin
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
     expose_headers=["X-Backend-Time-Ms", "X-DB-Time-Ms"]
 )
 
