@@ -135,3 +135,76 @@ async def health_check(db: AsyncSession = Depends(get_db)):
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         raise HTTPException(status_code=503, detail=f"Database unavailable: {str(e)}")
+
+
+@app.post("/api/seed")
+async def seed_database(count: int = 1000, db: AsyncSession = Depends(get_db)):
+    """Seed database with test patient data."""
+    import random
+    from datetime import timedelta
+    from faker import Faker
+    from .models import Gender, InsuranceType, CareLevel
+
+    fake = Faker('ko_KR')
+
+    # Check existing count
+    result = await db.execute(select(func.count(PatientAdmission.id)))
+    existing = result.scalar() or 0
+
+    if existing >= count:
+        return {"message": f"Database already has {existing} records", "total": existing}
+
+    records_to_add = count - existing
+    logger.info(f"Seeding {records_to_add} records...")
+
+    DIAGNOSES = ["뇌졸중 후유증", "치매", "파킨슨병", "골절 후 재활", "당뇨합병증",
+                 "만성폐쇄성폐질환", "심부전", "척추질환", "관절염", "욕창"]
+    ADMISSION_ROUTES = ["외래", "응급", "타병원전원", "요양시설전원", "가정"]
+    DOCTOR_NAMES = ["김영수", "이정희", "박민수", "최수진", "정대현"]
+    RELATIONSHIPS = ["자녀", "배우자", "손자녀", "형제자매", "기타"]
+
+    for i in range(records_to_add):
+        gender = random.choice([Gender.MALE, Gender.FEMALE])
+        birth_date = fake.date_of_birth(minimum_age=60, maximum_age=95)
+        admission_date = fake.date_between(start_date='-2y', end_date='today')
+        floor = random.choices([1, 2, 3, 4, 5], weights=[30, 25, 20, 15, 10])[0]
+
+        birth_year = birth_date.year % 100
+        resident_front = f"{birth_year:02d}{birth_date.month:02d}{birth_date.day:02d}"
+
+        patient = PatientAdmission(
+            patient_id=f"P{2024000000 + existing + i:010d}",
+            resident_number=f"{resident_front}-*******",
+            patient_name=fake.name(),
+            gender=gender.value,
+            birth_date=birth_date,
+            contact_phone=fake.phone_number(),
+            guardian_name=fake.name(),
+            guardian_phone=fake.phone_number(),
+            guardian_relationship=random.choice(RELATIONSHIPS),
+            floor=floor,
+            room_number=f"{floor}{random.randint(1, 20):02d}",
+            bed_number=str(random.randint(1, 4)),
+            admission_date=admission_date,
+            expected_discharge_date=admission_date + timedelta(days=random.randint(30, 365)),
+            admission_route=random.choice(ADMISSION_ROUTES),
+            primary_diagnosis=random.choice(DIAGNOSES),
+            secondary_diagnosis=random.choice(DIAGNOSES + [None]),
+            attending_doctor=random.choice(DOCTOR_NAMES),
+            nursing_unit=f"{floor}층 간호단위",
+            insurance_type=random.choice(list(InsuranceType)).value,
+            care_level=random.choice(list(CareLevel)).value,
+            is_active=random.random() > 0.2
+        )
+        db.add(patient)
+
+        if (i + 1) % 100 == 0:
+            await db.commit()
+            logger.info(f"Inserted {existing + i + 1} records...")
+
+    await db.commit()
+
+    result = await db.execute(select(func.count(PatientAdmission.id)))
+    final_count = result.scalar() or 0
+
+    return {"message": "Seeding complete", "total": final_count, "added": records_to_add}

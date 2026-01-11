@@ -1,16 +1,16 @@
 import enum
-from sqlalchemy import Column, Integer, String, Date, DateTime, Text, Enum, Boolean
+from sqlalchemy import Column, Integer, String, Date, DateTime, Text, Boolean
 from sqlalchemy.sql import func
 
 from .database import Base
 
 
-class Gender(enum.Enum):
+class Gender(str, enum.Enum):
     MALE = "M"
     FEMALE = "F"
 
 
-class InsuranceType(enum.Enum):
+class InsuranceType(str, enum.Enum):
     NATIONAL_HEALTH = "국민건강보험"
     MEDICAL_AID_1 = "의료급여1종"
     MEDICAL_AID_2 = "의료급여2종"
@@ -18,7 +18,7 @@ class InsuranceType(enum.Enum):
     SELF_PAY = "비급여"
 
 
-class CareLevel(enum.Enum):
+class CareLevel(str, enum.Enum):
     LEVEL_1 = "1등급"
     LEVEL_2 = "2등급"
     LEVEL_3 = "3등급"
@@ -41,7 +41,7 @@ class PatientAdmission(Base):
 
     # Patient Demographics (환자 인적사항)
     patient_name = Column(String(50), nullable=False)
-    gender = Column(Enum(Gender), nullable=False)
+    gender = Column(String(10), nullable=False)
     birth_date = Column(Date, nullable=False)
     contact_phone = Column(String(20))
 
@@ -68,8 +68,8 @@ class PatientAdmission(Base):
     nursing_unit = Column(String(50))
 
     # Insurance & Care Level (보험 및 등급 정보)
-    insurance_type = Column(Enum(InsuranceType), nullable=False)
-    care_level = Column(Enum(CareLevel))
+    insurance_type = Column(String(50), nullable=False)
+    care_level = Column(String(50))
 
     # Status
     is_active = Column(Boolean, default=True, index=True)

@@ -95,7 +95,7 @@ async def seed_database(count: int = 1000):
                 patient_id=f"P{2024000000 + existing + i:010d}",
                 resident_number=f"{resident_front}-*******",
                 patient_name=fake.name(),
-                gender=gender,
+                gender=gender.value,
                 birth_date=birth_date,
                 contact_phone=fake.phone_number(),
                 guardian_name=fake.name(),
@@ -111,8 +111,8 @@ async def seed_database(count: int = 1000):
                 secondary_diagnosis=random.choice(DIAGNOSES + [None, None]),
                 attending_doctor=random.choice(DOCTOR_NAMES),
                 nursing_unit=f"{floor}층 간호단위",
-                insurance_type=random.choice(list(InsuranceType)),
-                care_level=random.choice(list(CareLevel)),
+                insurance_type=random.choice(list(InsuranceType)).value,
+                care_level=random.choice(list(CareLevel)).value,
                 is_active=random.random() > 0.2  # 80% active
             )
             patients.append(patient)

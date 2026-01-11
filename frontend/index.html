@@ -222,6 +222,9 @@
                 <button onclick="fetchStats()" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
                     Stats
                 </button>
+                <button onclick="seedDatabase()" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    Seed DB
+                </button>
             </div>
         </div>
 
@@ -368,6 +371,20 @@
                 log(`Stats: ${data.total_patients} total, ${data.active_patients} active`, 'success');
             } catch (err) {
                 log(`Stats error: ${err.message}`, 'error');
+            }
+        };
+
+        const seedDatabase = async () => {
+            const apiUrl = `${getBaseUrl()}/api/seed?count=1000`;
+            log(`Seeding database: ${apiUrl}`, 'info');
+
+            try {
+                const response = await fetch(apiUrl, { method: 'POST' });
+                const data = await response.json();
+                log(`Seed result: ${data.message} (total: ${data.total})`, 'success');
+                fetchStats();
+            } catch (err) {
+                log(`Seed error: ${err.message}`, 'error');
             }
         };
 

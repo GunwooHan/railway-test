@@ -36,18 +36,12 @@ echo -e "${YELLOW}Installing dependencies...${NC}"
 pip install -q -r backend/requirements.txt
 echo -e "${GREEN}✓ Dependencies installed${NC}"
 
-# Check PostgreSQL connection
+# Check database configuration
 if [ -n "$DATABASE_URL" ]; then
-    echo -e "${GREEN}✓ DATABASE_URL is set${NC}"
+    echo -e "${GREEN}✓ DATABASE_URL is set (PostgreSQL)${NC}"
 else
-    echo -e "${YELLOW}⚠ DATABASE_URL not set. Using default: postgresql://postgres:postgres@localhost:5432/railway${NC}"
-    export DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/railway"
+    echo -e "${YELLOW}⚠ DATABASE_URL not set. Using SQLite for local development${NC}"
 fi
-
-# Seed database
-echo -e "${YELLOW}Seeding database with 1000 test records...${NC}"
-python -m backend.seed --count 1000
-echo -e "${GREEN}✓ Database seeded${NC}"
 
 echo ""
 echo -e "${BLUE}Starting servers...${NC}"
@@ -59,7 +53,19 @@ uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload &
 BACKEND_PID=$!
 
 # Wait for backend to start
-sleep 3
+echo -e "${YELLOW}Waiting for backend to start...${NC}"
+for i in {1..10}; do
+    if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+        echo -e "${GREEN}✓ Backend is ready${NC}"
+        break
+    fi
+    sleep 1
+done
+
+# Seed database via API
+echo -e "${YELLOW}Seeding database with 1000 test records...${NC}"
+SEED_RESULT=$(curl -s -X POST "http://localhost:8000/api/seed?count=1000")
+echo -e "${GREEN}✓ ${SEED_RESULT}${NC}"
 
 # Start simple HTTP server for frontend
 echo -e "${GREEN}Starting frontend server on port 8080...${NC}"

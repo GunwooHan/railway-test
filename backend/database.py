@@ -14,20 +14,32 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Railway provides DATABASE_URL automatically
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/railway")
+# For local testing without PostgreSQL, use SQLite
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 
-# Convert postgres:// to postgresql+asyncpg:// if needed (Railway uses postgres://)
-if DATABASE_URL.startswith("postgres://"):
+if not DATABASE_URL:
+    # Default to SQLite for local development
+    DATABASE_URL = "sqlite+aiosqlite:///./hospital.db"
+    logger.info("Using SQLite for local development")
+elif DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+elif DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+logger.info(f"Database URL scheme: {DATABASE_URL.split('://')[0]}")
 
 # Async engine with connection pool
-engine = create_async_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=5,
-    max_overflow=10,
-    echo=False
-)
+# SQLite doesn't support pool_size/max_overflow
+is_sqlite = DATABASE_URL.startswith("sqlite")
+engine_kwargs = {
+    "pool_pre_ping": True,
+    "echo": False
+}
+if not is_sqlite:
+    engine_kwargs["pool_size"] = 5
+    engine_kwargs["max_overflow"] = 10
+
+engine = create_async_engine(DATABASE_URL, **engine_kwargs)
 
 # Async session factory
 async_session = async_sessionmaker(
